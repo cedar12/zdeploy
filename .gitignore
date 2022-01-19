@@ -1,0 +1,15 @@
+
+/bin
+/dist
+
+.idea
+.DS_Store
+
+*.zip
+*.exe
+*.sh
+*.ini
+*.jar
+*_test.go
+
+zdeploy
