@@ -1,5 +1,5 @@
 # zdeploy
-[中文](https://github.com/cedar12/zdeploy/readme_zh.md)
+[中文](https://github.com/cedar12/zdeploy/blob/master/readme_zh.md)
 > Deployment file tool
 * Transfer deployment files
 * Provide shell/bat execution function
