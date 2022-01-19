@@ -1,4 +1,9 @@
 # zdeploy
+![](https://img.shields.io/github/license/cedar12/zdeploy)
+![](https://img.shields.io/github/stars/cedar12/zdeploy)
+![](https://img.shields.io/github/forks/cedar12/zdeploy)
+![](https://img.shields.io/github/issues/cedar12/zdeploy)
+![](https://img.shields.io/github/v/release/cedar12/zdeploy.svg)
 > 部署文件工具
 * 传输部署文件
 * 提供shell/bat执行功能

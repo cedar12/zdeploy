@@ -1,4 +1,10 @@
 # zdeploy
+![](https://img.shields.io/github/license/cedar12/zdeploy)
+![](https://img.shields.io/github/stars/cedar12/zdeploy)
+![](https://img.shields.io/github/forks/cedar12/zdeploy)
+![](https://img.shields.io/github/issues/cedar12/zdeploy)
+![](https://img.shields.io/github/v/release/cedar12/zdeploy.svg)
+
 [中文](https://github.com/cedar12/zdeploy/blob/master/readme_zh.md)
 > Deployment file tool
 * Transfer deployment files
