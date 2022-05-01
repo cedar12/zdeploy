@@ -17,23 +17,24 @@ package conn
 import (
 	"crypto/md5"
 	"fmt"
+	"golang.org/x/text/encoding/simplifiedchinese"
 	"log"
 	"net"
 	"os"
 	"os/exec"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 	. "zdeploy/common"
 	"zdeploy/config"
+	"zdeploy/encrypt"
 	"zdeploy/files"
 )
 
 func Server(parse config.IniParser) {
-	host := parse.GetString(ServerStr, "host")
-	port := parse.GetString(ServerStr, "port")
-	listen, err := net.Listen("tcp", host+":"+port)
+	host := parse.GetString(ServerStr, HostStr)
+	port := parse.GetString(ServerStr, PortStr)
+	listen, err := net.Listen(Network, host+":"+port)
 	if err != nil {
 		log.Println("Service failed to start ", err.Error())
 		return
@@ -45,6 +46,13 @@ func Server(parse config.IniParser) {
 		conn, err := listen.Accept()
 		if err != nil {
 			continue
+		}
+
+		conn.Write([]byte(Version))
+
+		err = parse.Reload()
+		if err != nil {
+			log.Println("Failed to reload ", parse.FileName())
 		}
 		log.Println(conn.RemoteAddr().String(), " join")
 		if ipFilter(conn, parse) {
@@ -58,8 +66,6 @@ func Server(parse config.IniParser) {
 }
 
 func ipFilter(conn net.Conn, parse config.IniParser) bool {
-
-	conn.Write([]byte(Version))
 
 	addr := conn.RemoteAddr().String()
 	ip := strings.Split(addr, ":")[0]
@@ -76,31 +82,6 @@ func ipFilter(conn net.Conn, parse config.IniParser) bool {
 	return false
 }
 
-func ip2binary(ip string) string {
-	str := strings.Split(ip, Dot)
-	var ipstr string
-	for _, s := range str {
-		i, err := strconv.ParseUint(s, 10, 8)
-		if err != nil {
-			fmt.Println(err)
-		}
-		ipstr = ipstr + fmt.Sprintf("%08b", i)
-	}
-	return ipstr
-}
-
-func ipMatch(ip, ipRange string) bool {
-	ipb := ip2binary(ip)
-	ipr := strings.Split(ipRange, "/")
-	masklen, err := strconv.ParseUint(ipr[1], 10, 32)
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-	iprb := ip2binary(ipr[0])
-	return strings.EqualFold(ipb[0:masklen], iprb[0:masklen])
-}
-
 func accept(conn net.Conn, parse config.IniParser) {
 	addr := conn.RemoteAddr().String()
 
@@ -111,14 +92,14 @@ func accept(conn net.Conn, parse config.IniParser) {
 			log.Println(err.Error())
 		}
 	}()
-	passSrc := parse.GetString(ServerStr, "pass")
+	passStr := parse.GetString(ServerStr, "pass")
 
 	pass, err := ReadStr(conn)
 	if err != nil {
 		log.Println(err.Error())
 	}
-	s := fmt.Sprintf("%x", md5.Sum([]byte(passSrc)))
-	if pass != s {
+	s := fmt.Sprintf("%x", md5.Sum([]byte(passStr)))
+	if encrypt.Decode(pass) != s {
 		log.Println(addr, " Authentication failed")
 		conn.Write([]byte{Err})
 		return
@@ -133,25 +114,23 @@ func accept(conn net.Conn, parse config.IniParser) {
 	}
 	conn.Write([]byte{Ok})
 
-	buf := make([]byte, 8)
-	n, err := conn.Read(buf)
+	fileSize, err := ReadInt(conn)
 	if err != nil {
 		log.Println(err.Error())
 		return
 	}
-	fileSize := BytesToInt64(buf[:n])
 
 	if FileExist(fileName) {
-		log.Println("rename ", fileName)
-		nowtime := time.Now().Format("20060102150405")
-		os.Rename(fileName, nowtime+fileName)
+		nowTime := time.Now().Format(TimeFormat)
+		log.Println("rename ", fileName, " -> ", nowTime+fileName)
+		os.Rename(fileName, nowTime+fileName)
 	}
 	log.Println("create " + fileName)
 	f, err := os.Create(fileName)
 	if err != nil {
 		log.Println("create file error ", err.Error())
 	}
-	fileBufSize := parse.GetInt64("server", "buf")
+	fileBufSize := parse.GetInt64(ServerStr, "buf")
 	if fileBufSize <= 0 {
 		fileBufSize = 2048
 	}
@@ -240,7 +219,7 @@ func execArgs(conn net.Conn, fileName string, parse config.IniParser) error {
 func command(arg string) (string, error) {
 	args := []string{"/C"}
 	cmdName := "cmd"
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != Windows {
 		cmdName = "bash"
 		args[0] = "-c"
 	}
@@ -253,19 +232,32 @@ func command(arg string) (string, error) {
 		return "", err
 	}
 	result := string(output)
+	if runtime.GOOS == Windows {
+		result = ConvertByte2String(output, GB18030)
+	}
 	log.Print(result)
 	return result, nil
 }
 
-func CheckIp(ip string) bool {
-	parts := strings.Split(ip, Dot)
-	for _, part := range parts {
-		intPart, err := strconv.Atoi(part)
-		if err != nil || intPart < 0 || intPart > 255 {
-			return false
-		}
+type Charset string
+
+const (
+	UTF8    = Charset("UTF-8")
+	GB18030 = Charset("GB18030")
+)
+
+func ConvertByte2String(byte []byte, charset Charset) string {
+	var str string
+	switch charset {
+	case GB18030:
+		var decodeBytes, _ = simplifiedchinese.GB18030.NewDecoder().Bytes(byte)
+		str = string(decodeBytes)
+	case UTF8:
+		fallthrough
+	default:
+		str = string(byte)
 	}
-	return true
+	return str
 }
 
 func IpWhiteMatch(ip string, targetIp string) bool {

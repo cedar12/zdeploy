@@ -19,6 +19,7 @@ import (
 )
 
 type IniParser struct {
+	fileName   string
 	confReader *ini.File // config reader
 }
 
@@ -28,22 +29,24 @@ type IniParserError struct {
 
 func (e *IniParserError) Error() string { return e.errorInfo }
 
-func (this *IniParser) Load(configFileName string) error {
+func (p *IniParser) Load(configFileName string) error {
+
 	conf, err := ini.Load(configFileName)
 	if err != nil {
-		this.confReader = nil
+		p.confReader = nil
 		return err
 	}
-	this.confReader = conf
+	p.fileName = configFileName
+	p.confReader = conf
 	return nil
 }
 
-func (this *IniParser) GetString(section string, key string) string {
-	if this.confReader == nil {
+func (p *IniParser) GetString(section string, key string) string {
+	if p.confReader == nil {
 		return ""
 	}
 
-	s := this.confReader.Section(section)
+	s := p.confReader.Section(section)
 	if s == nil {
 		return ""
 	}
@@ -51,12 +54,12 @@ func (this *IniParser) GetString(section string, key string) string {
 	return s.Key(key).String()
 }
 
-func (this *IniParser) GetInt32(section string, key string) int32 {
-	if this.confReader == nil {
+func (p *IniParser) GetInt32(section string, key string) int32 {
+	if p.confReader == nil {
 		return 0
 	}
 
-	s := this.confReader.Section(section)
+	s := p.confReader.Section(section)
 	if s == nil {
 		return 0
 	}
@@ -66,12 +69,12 @@ func (this *IniParser) GetInt32(section string, key string) int32 {
 	return int32(valueInt)
 }
 
-func (this *IniParser) GetUint32(section string, key string) uint32 {
-	if this.confReader == nil {
+func (p *IniParser) GetUint32(section string, key string) uint32 {
+	if p.confReader == nil {
 		return 0
 	}
 
-	s := this.confReader.Section(section)
+	s := p.confReader.Section(section)
 	if s == nil {
 		return 0
 	}
@@ -81,12 +84,12 @@ func (this *IniParser) GetUint32(section string, key string) uint32 {
 	return uint32(valueInt)
 }
 
-func (this *IniParser) GetInt64(section string, key string) int64 {
-	if this.confReader == nil {
+func (p *IniParser) GetInt64(section string, key string) int64 {
+	if p.confReader == nil {
 		return 0
 	}
 
-	s := this.confReader.Section(section)
+	s := p.confReader.Section(section)
 	if s == nil {
 		return 0
 	}
@@ -95,12 +98,12 @@ func (this *IniParser) GetInt64(section string, key string) int64 {
 	return valueInt
 }
 
-func (this *IniParser) GetUint64(section string, key string) uint64 {
-	if this.confReader == nil {
+func (p *IniParser) GetUint64(section string, key string) uint64 {
+	if p.confReader == nil {
 		return 0
 	}
 
-	s := this.confReader.Section(section)
+	s := p.confReader.Section(section)
 	if s == nil {
 		return 0
 	}
@@ -109,12 +112,12 @@ func (this *IniParser) GetUint64(section string, key string) uint64 {
 	return valueInt
 }
 
-func (this *IniParser) GetFloat32(section string, key string) float32 {
-	if this.confReader == nil {
+func (p *IniParser) GetFloat32(section string, key string) float32 {
+	if p.confReader == nil {
 		return 0
 	}
 
-	s := this.confReader.Section(section)
+	s := p.confReader.Section(section)
 	if s == nil {
 		return 0
 	}
@@ -123,16 +126,24 @@ func (this *IniParser) GetFloat32(section string, key string) float32 {
 	return float32(valueFloat)
 }
 
-func (this *IniParser) GetFloat64(section string, key string) float64 {
-	if this.confReader == nil {
+func (p *IniParser) GetFloat64(section string, key string) float64 {
+	if p.confReader == nil {
 		return 0
 	}
 
-	s := this.confReader.Section(section)
+	s := p.confReader.Section(section)
 	if s == nil {
 		return 0
 	}
 
 	valueFloat, _ := s.Key(key).Float64()
 	return valueFloat
+}
+
+func (p *IniParser) Reload() error {
+	return p.confReader.Reload()
+}
+
+func (p *IniParser) FileName() string {
+	return p.fileName
 }

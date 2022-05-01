@@ -22,16 +22,22 @@ import (
 )
 
 const (
-	Version   string = "0.1"
+	Version   string = "0.2"
 	Success   string = "success"
 	Fail      string = "fail"
 	Ok        byte   = 1
 	Err       byte   = 0
 	EmptyStr  string = ""
 	ServerStr string = "server"
-	Delimiter string = "|"
-	Dot       string = "."
-	MatchAll  string = "*"
+	HostStr   string = "host"
+	PortStr   string = "port"
+
+	Delimiter  string = "|"
+	Dot        string = "."
+	MatchAll   string = "*"
+	Windows    string = "windows"
+	TimeFormat string = "20060102150405"
+	Network    string = "tcp"
 )
 
 func Int64ToBytes(num int64) []byte {
@@ -63,10 +69,7 @@ func ReadBool(conn net.Conn) bool {
 		log.Println(err.Error())
 		return false
 	}
-	if buf[0] != Ok {
-		return false
-	}
-	return true
+	return buf[0] == Ok
 }
 
 func ReadInt(conn net.Conn) (int64, error) {

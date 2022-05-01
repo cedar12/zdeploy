@@ -33,8 +33,10 @@ func main() {
 			parser.Load(os.Args[2])
 			conn.Server(parser)
 		} else if os.Args[1] == "-c" {
-			parser.Load(os.Args[2])
-			conn.Client(parser)
+			for i := 2; i < len(os.Args); i++ {
+				parser.Load(os.Args[i])
+				conn.Client(parser)
+			}
 		} else {
 			log.Fatalln("invalid option " + os.Args[1])
 		}

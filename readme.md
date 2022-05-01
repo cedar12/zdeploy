@@ -1,4 +1,4 @@
-# zdeploy
+# zdeploy 👍
 ![](https://img.shields.io/github/license/cedar12/zdeploy)
 ![](https://img.shields.io/github/stars/cedar12/zdeploy)
 ![](https://img.shields.io/github/forks/cedar12/zdeploy)

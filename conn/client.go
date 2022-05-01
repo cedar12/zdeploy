@@ -15,8 +15,6 @@
 package conn
 
 import (
-	"crypto/md5"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -24,29 +22,31 @@ import (
 	"strings"
 	. "zdeploy/common"
 	"zdeploy/config"
+	"zdeploy/encrypt"
 	"zdeploy/progress"
 )
 
 func Client(parser config.IniParser) {
-	host := parser.GetString("server", "host")
-	port := parser.GetString("server", "port")
+	host := parser.GetString(ServerStr, HostStr)
+	port := parser.GetString(ServerStr, PortStr)
 	src := parser.GetString("deploy", "src")
 	f, err := os.Open(src)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
 		return
 	}
 	defer f.Close()
 
 	fi, err := os.Stat(src)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
 		return
 	}
 
-	conn, err := net.Dial("tcp", host+":"+port)
+	conn, err := net.Dial(Network, host+":"+port)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
+		return
 	}
 	log.Println("connect ", conn.RemoteAddr().String())
 	defer conn.Close()
@@ -61,23 +61,22 @@ func Client(parser config.IniParser) {
 		return
 	}
 
-	s := fmt.Sprintf("%x", md5.Sum([]byte(parser.GetString("server", "pass"))))
-	conn.Write([]byte(s))
+	conn.Write([]byte(encrypt.Encode(parser.GetString(ServerStr, "pass"))))
 
 	buf := make([]byte, 1)
 	_, err = conn.Read(buf)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
 		return
 	}
 	if buf[0] != Ok {
-		log.Fatalln("Authentication failed")
+		log.Println("Authentication failed")
 		return
 	}
 	log.Println("Certification passed")
 	dist := parser.GetString("deploy", "dist")
 	if dist == "" {
-		log.Fatalln("Configuration error [deploy]->dist")
+		log.Println("Configuration error [deploy]->dist")
 		return
 	}
 	conn.Write([]byte(dist))
@@ -85,30 +84,28 @@ func Client(parser config.IniParser) {
 	buf = make([]byte, 1)
 	_, err = conn.Read(buf)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
 		return
 	}
 	if buf[0] != Ok {
-		log.Fatalln("server not ok")
+		log.Println("server not ok")
 		return
 	}
 
 	conn.Write(Int64ToBytes(fi.Size()))
 
-	buf = make([]byte, 8)
-	n, err := conn.Read(buf)
+	fileBufSize, err := ReadInt(conn)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
 		return
 	}
-	fileBufSize := BytesToInt64(buf[:n])
 
 	log.Println("file ready buf ", fileBufSize)
 
 	p := progress.NewProgress(0, fi.Size())
 	for {
 		buf = make([]byte, fileBufSize)
-		n, err = f.Read(buf)
+		n, err := f.Read(buf)
 		if err != nil && io.EOF == err {
 			log.Println("File sending completed, waiting for receiving to complete")
 			break
@@ -122,11 +119,11 @@ func Client(parser config.IniParser) {
 	buf = make([]byte, 1)
 	_, err = conn.Read(buf)
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Println(err.Error())
 		return
 	}
 	if buf[0] != Ok {
-		log.Fatalln("server file not ok")
+		log.Println("server file not ok")
 		return
 	}
 
